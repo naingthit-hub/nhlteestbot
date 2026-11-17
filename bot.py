@@ -32,7 +32,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
         # Google GenAI SDK အသစ်၏ Interactions API သို့မဟုတ် models.generate_content ကို အသုံးပြုခြင်း
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.8-flash',
             contents=prompt,
         )
         
