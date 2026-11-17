@@ -2,54 +2,49 @@ import os
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
-import requests
+import google.generativeai as genai
 
-# Render ရဲ့ Environment Variables မှ Token များကို ယူသုံးခြင်း
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-
+# Logging Setup
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 
-async def chat_with_deepseek(prompt: str) -> str:
-    url = "https://api.deepseek.com/chat/completions"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
-    }
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [
-            {"role": "system", "content": "You are a helpful language translation and vocabulary assistant. Translate words accurately between Myanmar (Burmese) and English, and explain meanings clearly."},
-            {"role": "user", "content": prompt}
-        ],
-        "stream": False
-    }
-    
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 200:
-            res_json = response.json()
-            return res_json['choices'][0]['message']['content']
-        else:
-            return f"API Error: {response.status_code}"
-    except Exception as e:
-        return f"Connection Error: {str(e)}"
+# Environment Variables မှ Tokens များကို ဖတ်ယူခြင်း
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+# Gemini API ကို Configure လုပ်ခြင်း (gemini-2.5-flash သို့မဟုတ် gemini-1.5-flash ကို သုံးနိုင်ပါတယ်)
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_message = update.message.text
-    prompt = f"Please translate or explain the following word/sentence contextually in Myanmar and English: {user_message}"
-    ai_response = await chat_with_deepseek(prompt)
-    await update.message.reply_text(ai_response)
+    user_text = update.message.text
+    
+    # ဂျပန်စာ ဘာသာပြန်ဆိုရန် Prompt သတ်မှတ်ခြင်း
+    prompt = f"Translate the following text into Japanese accurately, and provide its Myanmar meaning as well: {user_text}"
+    
+    try:
+        # Gemini Model ဆီသို့ Request ပို့ခြင်း
+        response = model.generate_content(prompt)
+        reply_text = response.text
+    except Exception as e:
+        logging.error(f"Gemini API Error: {e}")
+        reply_text = f"API Error: {e}"
+        
+    await update.message.reply_text(reply_text)
 
 def main():
-    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-    echo_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message)
-    application.add_handler(echo_handler)
+    if not TELEGRAM_BOT_TOKEN or not GEMINI_API_KEY:
+        print("Error: TELEGRAM_BOT_TOKEN or GEMINI_API_KEY is missing!")
+        return
 
-    print("Bot is running on Render...")
+    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    
+    # စာသားမှန်သမျှကို လက်ခံပြီး handle_message သို့ ပို့ပေးရန်
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+    
+    print("Bot is running with Gemini API...")
     application.run_polling()
 
 if __name__ == '__main__':
