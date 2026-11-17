@@ -18,7 +18,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 # Gemini API ကို Configure လုပ်ခြင်း
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-3.8-flash')
 
 # Render Timeout မဖြစ်စေရန် Flask Web Server ငယ်တစ်ခု တည်ဆောက်ခြင်း
 app = Flask(__name__)
