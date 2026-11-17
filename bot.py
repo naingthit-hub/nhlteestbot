@@ -18,7 +18,7 @@ GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 # Google GenAI Client အသစ်ကို ချိတ်ဆက်ခြင်း
 client = genai.Client(api_key=GEMINI_KEY)
 
-# ဂျပန်စာ ဘာသာပြန်ဆိုပေးမည့် Function
+# ဂျပန်စာ ဘာသာပြန်ဆိုပေးမည့် Function (Interactions API အသစ်ကို အသုံးပြုခြင်း)
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
     
@@ -30,13 +30,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 စာသား: {user_text}
 """
-        # Google GenAI SDK အသစ်၏ Interactions API သို့မဟုတ် models.generate_content ကို အသုံးပြုခြင်း
-        response = client.models.generate_content(
-            model='gemini-3.8-flash',
-            contents=prompt,
+        # Google AI Studio ရဲ့ Interactions API အသစ် (`client.interactions.create`) ကို အသုံးပြုခြင်း
+        interaction = client.interactions.create(
+            model='gemini-4-hydrogen',
+            input=prompt
         )
         
-        reply_text = response.text
+        reply_text = interaction.output_text
         await update.message.reply_text(reply_text)
         
     except Exception as e:
